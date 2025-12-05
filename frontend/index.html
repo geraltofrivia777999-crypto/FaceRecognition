@@ -154,6 +154,14 @@
     return document.getElementById('apiBase').value.replace(/\/$/, '') + path;
   }
 
+  // Default API base to current origin if still localhost
+  (function autoSetApiBase() {
+    const input = document.getElementById('apiBase');
+    if (!input.value || input.value.includes('localhost')) {
+      input.value = window.location.origin;
+    }
+  })();
+
   async function checkHealth() {
     try {
       const res = await fetch(apiUrl('/health'));
