@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Face Access Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0b1021;
+      --panel:#0f172a;
+      --card:#131c33;
+      --accent:#5de0e6;
+      --accent-2:#004aad;
+      --text:#e7ecf5;
+      --muted:#9fb0c7;
+      --border:#1f2a44;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      font-family:'Manrope', sans-serif;
+      background:radial-gradient(circle at 20% 20%, rgba(93,224,230,0.08), transparent 25%),
+        radial-gradient(circle at 80% 0%, rgba(0,74,173,0.1), transparent 35%), var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:20px 28px;
+      border-bottom:1px solid var(--border);
+      background:linear-gradient(120deg, rgba(93,224,230,0.08), rgba(0,74,173,0.05));
+    }
+    h1 { margin:0; font-size:22px; letter-spacing:0.5px; }
+    .badge { padding:6px 10px; border-radius:999px; border:1px solid var(--border); color:var(--muted); font-size:12px; }
+    .layout { display:grid; grid-template-columns:280px 1fr; min-height:calc(100vh - 64px); }
+    nav { border-right:1px solid var(--border); background:var(--panel); padding:18px; }
+    nav .section { margin-bottom:14px; font-size:12px; text-transform:uppercase; color:var(--muted); letter-spacing:0.5px; }
+    nav button { width:100%; margin-bottom:10px; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--text); text-align:left; cursor:pointer; }
+    nav button:hover { border-color:var(--accent); }
+    nav input { width:100%; margin-bottom:10px; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); }
+    main { padding:20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:0 10px 40px rgba(0,0,0,0.25); }
+    .card h3 { margin:0 0 10px; font-size:16px; display:flex; align-items:center; gap:8px; }
+    label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    input, button, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); }
+    button.action { background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#041024; font-weight:700; border:none; box-shadow:0 10px 30px rgba(93,224,230,0.25); }
+    button:disabled { opacity:0.6; cursor:not-allowed; }
+    .two-col { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    .list { max-height:320px; overflow-y:auto; margin:0; padding:0; list-style:none; }
+    .list li { padding:10px 0; border-bottom:1px solid var(--border); }
+    .small { color:var(--muted); font-size:12px; }
+    .tag { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:var(--panel); font-size:11px; margin-right:6px; }
+    .pill { padding:6px 10px; border-radius:10px; background:rgba(93,224,230,0.12); color:var(--text); font-weight:600; display:inline-block; }
+    .stack { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .toolbar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Face Access Control</h1>
+    <div class="small">Raspberry sync • Embeddings • GPIO</div>
+  </div>
+  <div class="stack">
+    <div class="badge" id="health">Health: checking...</div>
+    <div class="badge" id="tokenStatus">Not authenticated</div>
+  </div>
+</header>
+<div class="layout">
+  <nav>
+    <div class="section">Connection</div>
+    <label>API base URL</label>
+    <input id="apiBase" value="http://localhost:8000">
+    <div style="height:12px;"></div>
+    <div class="section">Auth</div>
+    <label>Login</label>
+    <input id="login" value="admin">
+    <label>Password</label>
+    <input id="password" type="password" value="admin">
+    <button class="action" onclick="doLogin()">Login</button>
+  </nav>
+  <main>
+    <section class="card">
+      <div class="toolbar">
+        <h3>Create user</h3>
+        <span class="pill">Step 1</span>
+      </div>
+      <label>Full name</label>
+      <input id="fullName" placeholder="Ivan Ivanov">
+      <div class="two-col" style="margin-top:10px;">
+        <div>
+          <label>Identifier (login)</label>
+          <input id="identifier" placeholder="login">
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="userPassword" type="password" placeholder="••••••">
+        </div>
+      </div>
+      <label style="margin-top:10px;">Access expires at (UTC, optional)</label>
+      <input id="expiresAt" type="datetime-local">
+      <button class="action" style="margin-top:12px;" onclick="createUser()">Create</button>
+      <div class="small" style="margin-top:6px;">After creation upload photos (Step 2).</div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h3>Upload photo</h3>
+        <span class="pill">Step 2</span>
+      </div>
+      <label>User ID</label>
+      <input id="uploadUserId" placeholder="e.g. 1">
+      <label style="margin-top:10px;">Photo (jpg/png)</label>
+      <input id="photoFile" type="file" accept="image/*" multiple>
+      <button class="action" style="margin-top:12px;" onclick="uploadPhoto()">Upload</button>
+      <div class="small" id="uploadStatus" style="margin-top:6px;"></div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h3>Users</h3>
+        <button onclick="loadUsers()">Refresh</button>
+      </div>
+      <ul class="list" id="users"></ul>
+      <div style="margin-top:10px;">
+        <label>View photos (enter user ID)</label>
+        <div class="two-col">
+          <input id="photosUserId" placeholder="e.g. 1">
+          <button onclick="loadPhotos()">Load photos</button>
+        </div>
+        <div id="photosGrid" class="stack" style="margin-top:10px; flex-wrap:wrap;"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h3>Events</h3>
+        <button onclick="loadEvents()">Refresh</button>
+      </div>
+      <ul class="list" id="events"></ul>
+    </section>
+  </main>
+</div>
+
+<script>
+  let token = null;
+
+  function apiUrl(path) {
+    return document.getElementById('apiBase').value.replace(/\/$/, '') + path;
+  }
+
+  async function checkHealth() {
+    try {
+      const res = await fetch(apiUrl('/health'));
+      const data = await res.json();
+      document.getElementById('health').innerText = 'Health: ' + data.status;
+    } catch (e) {
+      document.getElementById('health').innerText = 'Health: offline';
+    }
+  }
+
+  async function doLogin() {
+    const body = new URLSearchParams();
+    body.append('username', document.getElementById('login').value);
+    body.append('password', document.getElementById('password').value);
+    body.append('grant_type', 'password');
+    const res = await fetch(apiUrl('/auth/login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    if (!res.ok) {
+      document.getElementById('tokenStatus').innerText = 'Login failed';
+      return;
+    }
+    const data = await res.json();
+    token = data.access_token;
+    document.getElementById('tokenStatus').innerText = 'Authenticated';
+    loadUsers();
+    loadEvents();
+  }
+
+  async function createUser() {
+    const payload = {
+      full_name: document.getElementById('fullName').value,
+      identifier: document.getElementById('identifier').value,
+      password: document.getElementById('userPassword').value,
+      is_active: true,
+      expires_at: document.getElementById('expiresAt').value || null
+    };
+    const res = await fetch(apiUrl('/users/create'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) { alert('Failed to create'); return; }
+    document.getElementById('fullName').value = '';
+    document.getElementById('identifier').value = '';
+    document.getElementById('userPassword').value = '';
+    loadUsers();
+  }
+
+  async function loadUsers() {
+    const res = await fetch(apiUrl('/users/'), {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    if (!res.ok) return;
+    const users = await res.json();
+    const list = document.getElementById('users');
+    list.innerHTML = '';
+    users.forEach(u => {
+      const li = document.createElement('li');
+      const created = u.created_at ? new Date(u.created_at).toLocaleString() : '';
+      li.innerHTML = `<div class="stack"><span class="tag">id=${u.id}</span><span class="tag">${u.identifier}</span><span class="tag">${u.is_active ? 'active' : 'disabled'}</span></div><div><strong>${u.full_name}</strong></div><div class="small">Created: ${created}</div>`;
+      list.appendChild(li);
+    });
+  }
+
+  async function uploadPhoto() {
+    const userId = document.getElementById('uploadUserId').value;
+    const filesInput = document.getElementById('photoFile');
+    if (!userId || filesInput.files.length === 0) {
+      document.getElementById('uploadStatus').innerText = 'Specify user ID and choose files';
+      return;
+    }
+    const form = new FormData();
+    form.append('user_id', userId);
+    for (const f of filesInput.files) {
+      form.append('files', f);
+    }
+    const res = await fetch(apiUrl('/users/upload-photo'), {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: form
+    });
+    if (!res.ok) {
+      document.getElementById('uploadStatus').innerText = 'Upload failed';
+      return;
+    }
+    const data = await res.json();
+    document.getElementById('uploadStatus').innerText = `Uploaded: ${data.length} photo(s)`;
+    filesInput.value = '';
+  }
+
+  async function loadEvents() {
+    const res = await fetch(apiUrl('/events/'), {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    if (!res.ok) return;
+    const events = await res.json();
+    const list = document.getElementById('events');
+    list.innerHTML = '';
+    events.forEach(ev => {
+      const created = ev.created_at ? new Date(ev.created_at).toLocaleString() : '';
+      const li = document.createElement('li');
+      li.innerHTML = `<div class="stack"><span class="tag">${ev.status}</span><span class="tag">${ev.device_id || 'n/a'}</span></div><div class="small">${created}</div><div class="small">${ev.message || ''}</div>`;
+      list.appendChild(li);
+    });
+  }
+
+  async function loadPhotos() {
+    const userId = document.getElementById('photosUserId').value;
+    if (!userId) return;
+    const res = await fetch(apiUrl(`/users/photos/${userId}`), {
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    if (!res.ok) return;
+    const photos = await res.json();
+    const grid = document.getElementById('photosGrid');
+    grid.innerHTML = '';
+    photos.forEach(url => {
+      const img = document.createElement('img');
+      img.src = apiUrl('') + url; // relative to API base
+      img.style.width = '120px';
+      img.style.height = '120px';
+      img.style.objectFit = 'cover';
+      img.style.borderRadius = '10px';
+      img.style.border = '1px solid var(--border)';
+      grid.appendChild(img);
+    });
+  }
+
+  checkHealth();
+</script>
+</body>
+</html>
