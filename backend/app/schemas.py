@@ -94,7 +94,7 @@ class EventOut(BaseModel):
 
 
 class SyncPayload(BaseModel):
-    embeddings: list[EmbeddingOut]
+    photos: list["PhotoMeta"]
     users: list[UserOut]
     access_windows: list[AccessWindowOut]
     config: dict
@@ -107,3 +107,13 @@ class CaptureUploadResponse(BaseModel):
     filename: str
     url: str
     size_bytes: int
+
+
+class PhotoMeta(BaseModel):
+    user_id: int
+    filename: str
+    url: str
+    captured_at: datetime | None = None
+
+
+SyncPayload.model_rebuild()

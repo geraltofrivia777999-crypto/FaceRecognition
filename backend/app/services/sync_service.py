@@ -1,5 +1,6 @@
 import hashlib
-import json
+from datetime import datetime
+from pathlib import Path
 from typing import Tuple
 
 from sqlalchemy.orm import Session
@@ -10,20 +11,26 @@ from backend.app.config import get_settings
 
 def build_sync_payload(db: Session) -> tuple[schemas.SyncPayload, str]:
     settings = get_settings()
-    embeddings_out: list[schemas.EmbeddingOut] = []
-    for emb in db.query(models.Embedding).all():
-        vector = json.loads(emb.vector)
-        embeddings_out.append(
-            schemas.EmbeddingOut(
-                id=emb.id,
-                model_name=emb.model_name,
-                created_at=emb.created_at,
-                vector=vector,
-            )
-        )
-
     users = [schemas.UserOut.model_validate(user) for user in db.query(models.User).all()]
     windows = [schemas.AccessWindowOut.model_validate(w) for w in db.query(models.AccessWindow).all()]
+    photos: list[schemas.PhotoMeta] = []
+    photos_root = Path("data/photos")
+    for user in users:
+        user_dir = photos_root / f"user_{user.id}"
+        if not user_dir.exists():
+            continue
+        for file_path in user_dir.iterdir():
+            if not file_path.is_file():
+                continue
+            stat = file_path.stat()
+            photos.append(
+                schemas.PhotoMeta(
+                    user_id=user.id,
+                    filename=file_path.name,
+                    url=f"/uploads/user_{user.id}/{file_path.name}",
+                    captured_at=datetime.fromtimestamp(stat.st_mtime),
+                )
+            )
     config = {
         "threshold": settings.threshold,
         "gpio_pin": settings.gpio_pin,
@@ -31,7 +38,7 @@ def build_sync_payload(db: Session) -> tuple[schemas.SyncPayload, str]:
         "sync_interval_sec": settings.sync_interval_sec,
     }
     payload = schemas.SyncPayload(
-        embeddings=embeddings_out,
+        photos=photos,
         users=users,
         access_windows=windows,
         config=config,
