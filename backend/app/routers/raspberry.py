@@ -81,6 +81,16 @@ async def upload_capture(
         raise HTTPException(status_code=500, detail=f"Failed to store image: {exc}") from exc
 
     rel_url = f"/captures/{device_slug}/{filename}"
+    meta = {
+        "person_name": person_name,
+        "captured_at": ts.isoformat(),
+        "device_id": device_id,
+        "filename": filename,
+    }
+    try:
+        (out_path.with_suffix(out_path.suffix + ".json")).write_text(__import__("json").dumps(meta))
+    except Exception:
+        logger.warning("Failed to store capture metadata for %s", out_path)
     return schemas.CaptureUploadResponse(
         device_id=device_id,
         person_name=person_name,

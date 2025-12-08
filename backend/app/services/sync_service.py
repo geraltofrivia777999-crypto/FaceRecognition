@@ -31,6 +31,39 @@ def build_sync_payload(db: Session) -> tuple[schemas.SyncPayload, str]:
                     captured_at=datetime.fromtimestamp(stat.st_mtime),
                 )
             )
+    captures_root = Path("data/captures")
+    if captures_root.exists():
+        for device_dir in captures_root.iterdir():
+            if not device_dir.is_dir():
+                continue
+            for file_path in device_dir.iterdir():
+                if not file_path.is_file():
+                    continue
+                if file_path.suffix.lower() not in {".jpg", ".jpeg", ".png"}:
+                    continue
+                meta_path = file_path.with_suffix(file_path.suffix + ".json")
+                person_name = None
+                captured_at = None
+                try:
+                    if meta_path.exists():
+                        import json
+
+                        meta = json.loads(meta_path.read_text())
+                        person_name = meta.get("person_name")
+                        captured_at_raw = meta.get("captured_at")
+                        if captured_at_raw:
+                            captured_at = datetime.fromisoformat(str(captured_at_raw))
+                except Exception:
+                    pass
+                photos.append(
+                    schemas.PhotoMeta(
+                        user_id=None,
+                        person_name=person_name,
+                        filename=file_path.name,
+                        url=f"/captures/{device_dir.name}/{file_path.name}",
+                        captured_at=captured_at,
+                    )
+                )
     config = {
         "threshold": settings.threshold,
         "gpio_pin": settings.gpio_pin,

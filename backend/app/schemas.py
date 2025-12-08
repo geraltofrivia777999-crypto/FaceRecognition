@@ -110,7 +110,8 @@ class CaptureUploadResponse(BaseModel):
 
 
 class PhotoMeta(BaseModel):
-    user_id: int
+    user_id: int | None = None
+    person_name: str | None = None
     filename: str
     url: str
     captured_at: datetime | None = None
