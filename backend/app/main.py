@@ -14,9 +14,11 @@ settings = get_settings()
 # Ensure required directories exist before mounting static files
 DATA_DIR = Path("data")
 PHOTOS_DIR = DATA_DIR / "photos"
+CAPTURES_DIR = DATA_DIR / "captures"
 EMBED_DIR = Path(settings.embeddings_dir)
 DATA_DIR.mkdir(exist_ok=True)
 PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
+CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
 EMBED_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title=settings.app_name)
@@ -35,6 +37,7 @@ def startup():
     Path("data").mkdir(exist_ok=True)
     Path(settings.embeddings_dir).mkdir(parents=True, exist_ok=True)
     Path("data/photos").mkdir(parents=True, exist_ok=True)
+    Path("data/captures").mkdir(parents=True, exist_ok=True)
     init_db()
     db = SessionLocal()
     try:
@@ -57,6 +60,7 @@ frontend_path = Path(__file__).resolve().parents[2] / "frontend"
 if frontend_path.exists():
     app.mount("/ui", StaticFiles(directory=frontend_path, html=True), name="ui")
 app.mount("/uploads", StaticFiles(directory=PHOTOS_DIR, check_dir=False), name="uploads")
+app.mount("/captures", StaticFiles(directory=CAPTURES_DIR, check_dir=False), name="captures")
 
 
 def get_app() -> FastAPI:

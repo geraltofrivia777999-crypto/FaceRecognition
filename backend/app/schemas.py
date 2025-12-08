@@ -98,3 +98,12 @@ class SyncPayload(BaseModel):
     users: list[UserOut]
     access_windows: list[AccessWindowOut]
     config: dict
+
+
+class CaptureUploadResponse(BaseModel):
+    device_id: str | None
+    person_name: str
+    captured_at: datetime
+    filename: str
+    url: str
+    size_bytes: int
