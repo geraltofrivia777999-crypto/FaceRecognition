@@ -8,16 +8,19 @@ from sqlalchemy.orm import Session
 from backend.app import models, schemas
 from backend.app.config import get_settings
 
+BASE_DIR = Path(__file__).resolve().parents[3]
+PHOTOS_ROOT = BASE_DIR / "data" / "photos"
+CAPTURES_ROOT = BASE_DIR / "data" / "captures"
+
 
 def build_sync_payload(db: Session) -> tuple[schemas.SyncPayload, str]:
     settings = get_settings()
     users = [schemas.UserOut.model_validate(user) for user in db.query(models.User).all()]
     windows = [schemas.AccessWindowOut.model_validate(w) for w in db.query(models.AccessWindow).all()]
     photos: list[schemas.PhotoMeta] = []
-    photos_root = Path("data/photos")
     user_lookup = {user.id: user for user in users}
-    if photos_root.exists():
-        for user_dir in photos_root.iterdir():
+    if PHOTOS_ROOT.exists():
+        for user_dir in PHOTOS_ROOT.iterdir():
             if not user_dir.is_dir():
                 continue
             name = user_dir.name
@@ -43,9 +46,8 @@ def build_sync_payload(db: Session) -> tuple[schemas.SyncPayload, str]:
                         captured_at=datetime.fromtimestamp(stat.st_mtime),
                     )
                 )
-    captures_root = Path("data/captures")
-    if captures_root.exists():
-        for device_dir in captures_root.iterdir():
+    if CAPTURES_ROOT.exists():
+        for device_dir in CAPTURES_ROOT.iterdir():
             if not device_dir.is_dir():
                 continue
             for file_path in device_dir.iterdir():
