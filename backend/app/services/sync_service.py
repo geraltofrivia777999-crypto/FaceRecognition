@@ -15,22 +15,34 @@ def build_sync_payload(db: Session) -> tuple[schemas.SyncPayload, str]:
     windows = [schemas.AccessWindowOut.model_validate(w) for w in db.query(models.AccessWindow).all()]
     photos: list[schemas.PhotoMeta] = []
     photos_root = Path("data/photos")
-    for user in users:
-        user_dir = photos_root / f"user_{user.id}"
-        if not user_dir.exists():
-            continue
-        for file_path in user_dir.iterdir():
-            if not file_path.is_file():
+    user_lookup = {user.id: user for user in users}
+    if photos_root.exists():
+        for user_dir in photos_root.iterdir():
+            if not user_dir.is_dir():
                 continue
-            stat = file_path.stat()
-            photos.append(
-                schemas.PhotoMeta(
-                    user_id=user.id,
-                    filename=file_path.name,
-                    url=f"/uploads/user_{user.id}/{file_path.name}",
-                    captured_at=datetime.fromtimestamp(stat.st_mtime),
+            name = user_dir.name
+            if not name.startswith("user_"):
+                continue
+            try:
+                uid = int(name.split("_", 1)[1])
+            except Exception:
+                continue
+            for file_path in user_dir.iterdir():
+                if not file_path.is_file():
+                    continue
+                if file_path.suffix.lower() not in {".jpg", ".jpeg", ".png"}:
+                    continue
+                stat = file_path.stat()
+                user_obj = user_lookup.get(uid)
+                photos.append(
+                    schemas.PhotoMeta(
+                        user_id=uid if user_obj else None,
+                        person_name=user_obj.full_name if user_obj else None,
+                        filename=file_path.name,
+                        url=f"/uploads/user_{uid}/{file_path.name}",
+                        captured_at=datetime.fromtimestamp(stat.st_mtime),
+                    )
                 )
-            )
     captures_root = Path("data/captures")
     if captures_root.exists():
         for device_dir in captures_root.iterdir():
